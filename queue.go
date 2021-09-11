@@ -482,6 +482,55 @@ func (q *DQue) TurboSync() error {
 	return nil
 }
 
+// QueueFunction is a function that c
+type QueueFunction interface {
+	Apply(obj interface{}) error
+}
+
+// ApplyToQueue will apply the caller supplied function to each element of the queue
+// in-order.  This will cause each segement to load, so should be called sparingly.
+func (q *DQue) ApplyToQueue(function QueueFunction) error {
+	// This is heavy-handed but its safe
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+
+	if q.fileLock == nil {
+		return ErrQueueClosed
+	}
+
+	// Find all queue files
+	files, err := ioutil.ReadDir(q.fullPath)
+	if err != nil {
+		return errors.Wrap(err, "unable to read files in "+q.fullPath)
+	}
+
+	// Loop over the queue segements, load each, and apply the caller supplied function to each of
+	// the elements.
+	for _, f := range files {
+		if !f.IsDir() && filePattern.MatchString(f.Name()) {
+			// Extract number out of the filename
+			fileNumStr := filePattern.FindStringSubmatch(f.Name())[1]
+			fileNum, _ := strconv.Atoi(fileNumStr)
+
+			// Open the segment
+			seg, err := openQueueSegment(q.fullPath, fileNum, q.turbo, q.builder)
+			if err != nil {
+				return errors.Wrapf(err, "unable to create queue segment in "+q.fullPath)
+			}
+
+			for _, r := range seg.objects {
+				if err := function.Apply(r); err != nil {
+					return errors.Wrap(err, "unable apply function to queue")
+				}
+			}
+
+			// Close the segment
+			seg.close()
+		}
+	}
+	return nil
+}
+
 // load populates the queue from disk
 func (q *DQue) load() error {
 

@@ -1,4 +1,4 @@
-module github.com/joncrlsn/dque
+module github.com/cbethune/dque
 
 require github.com/pkg/errors v0.9.1
 

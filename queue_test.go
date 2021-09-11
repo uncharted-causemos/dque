@@ -6,12 +6,13 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/joncrlsn/dque"
+	"github.com/cbethune/dque"
 )
 
 // item2 is the thing we'll be storing in the queue
@@ -586,6 +587,46 @@ func TestQueue_BlockingAggresive(t *testing.T) {
 	// Cleanup
 	if err := os.RemoveAll(qName); err != nil {
 		t.Fatal("Error removing queue directory:", err)
+	}
+}
+
+type TestQueueFunc struct {
+	Data []interface{}
+}
+
+func (t *TestQueueFunc) Apply(obj interface{}) error {
+	i2, ok := obj.(*item2)
+	if !ok {
+		return fmt.Errorf("apply object data type incorrect - %s", reflect.TypeOf(obj))
+	}
+	t.Data = append(t.Data, i2.Id)
+	return nil
+}
+
+func TestQueueFunctionApply(t *testing.T) {
+	qName := "test1"
+	if err := os.RemoveAll(qName); err != nil {
+		t.Fatal("Error removing queue directory", err)
+	}
+
+	// Create a new queue with segment size of 3
+	q := newQ(t, qName, true)
+	if err := q.Enqueue(item2{0}); err != nil {
+		t.Fatal("Error enqueueing", err)
+	}
+	if err := q.Enqueue(item2{1}); err != nil {
+		t.Fatal("Error enqueueing", err)
+	}
+	testData := &TestQueueFunc{Data: []interface{}{}}
+	err := q.ApplyToQueue(testData)
+	if err != nil {
+		t.Fatal("Error applying func to queue")
+	}
+	if testData.Data[0] != 0 {
+		t.Fatal("Error applying func to queue")
+	}
+	if testData.Data[1] != 1 {
+		t.Fatal("Error applying func to queue")
 	}
 }
 
