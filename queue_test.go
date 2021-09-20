@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cbethune/dque"
+	"github.com/uncharted-causemos/dque"
 )
 
 // item2 is the thing we'll be storing in the queue

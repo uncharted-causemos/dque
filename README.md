@@ -69,7 +69,7 @@ package dque_test
 import (
     "log"
 
-    "github.com/cbethune/dque"
+    "github.com/uncharted-causemos/dque"
 )
 
 // Item is what we'll be storing in the queue.  It can be any struct
